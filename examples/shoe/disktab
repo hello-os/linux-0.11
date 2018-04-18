@@ -1,0 +1,33 @@
+#| Floppy disks
+#|
+#| 5.25 inch double sided double density 360kb disks
+f0|5.25dsdd|5.25 inch double sided double density 360kb disks:\
+	:nt#2:se#512:ns#9:md#253:\
+	:fp=0xdf 0x2 0x25 0x2 0x9 0x2a 0xff 0x50 0xf6 0x1 0x8:
+#|
+#| 5.25 inch double sided quad density 720kb disks
+f1|5.25dsqd|5.25 inch double sided quad density 720kb disks:\
+	:nt#2:se#512:ns#9:md#240:\
+	:fp=0xdf 0x2 0x25 0x2 0x9 0x2a 0xff 0x50 0xf6 0x1 0x8:
+#|
+#| 3.5 inch double sided double density 720kb disks
+#| duplicated from 5.25dsqd - this seems to work
+f2|3.5dsdd|3.5 inch double sided double density 720kb disks:\
+	:nt#2:se#512:ns#9:md#240:\
+	:fp=0xdf 0x2 0x25 0x2 0x9 0x2a 0xff 0x50 0xf6 0x1 0x8:
+#|
+#| 5.25 inch double sided high density 1200kb disks
+f3|5.25dshd|5.25 inch double sided high density 1200kb disks:\
+	:nt#2:se#512:ns#15:md#249:\
+	:fp=0xdf 0x2 0x25 0x2 0xf 0x1b 0xff 0x54 0xf6 0x1 0x8:
+#|
+#|
+#| Generic hard disk
+#|
+#| Hard disk parameters are obtained from the controller
+#| at boot time. These values are dummy values to make
+#| the installation procedure the same for both hard
+#| and soft disks.
+w0|wini|Generic hard disk:\
+	:nt#0:se#512:ns#0:md#248:\
+	:fp=0 0 0 0 0 0 0 0 0 0 0:

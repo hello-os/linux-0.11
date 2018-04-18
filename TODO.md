@@ -1,0 +1,3 @@
+
+1. Add 0.00, 0.01, 0.12, 0.99 ...
+2. Write [lad-book](https://github.com/tinyclub/lad-book.git) with people from community

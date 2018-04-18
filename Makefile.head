@@ -1,0 +1,77 @@
+
+OS := $(shell uname)
+
+ifeq ($V, 1)
+  Q =
+  S =
+else
+  MAKEFLAGS += --no-print-directory
+  S ?= -s
+  Q ?= @
+endif
+
+export V Q S
+
+LINUX_VERSION ?= 0.11
+LINUX_SRC     := src
+LINUX_IMAGE ?= $(LINUX_SRC)/Image
+# src/boot/bootsect.sym, src/boot/setup.sym
+DST ?= $(if $(LINUX_DST), $(LINUX_DST), $(LINUX_SRC)/kernel.sym)
+
+TOOL_DIR := tools
+ROOTFS_DIR := rootfs
+CALLGRAPH_DIR := callgraph
+
+# Xterminal: lxterminal, terminator ...
+XTERM ?= $(shell echo `tools/xterm.sh lxterminal`)
+  GDB ?= gdb
+
+# Qemu
+QEMU_PATH =
+QEMU_PREBUILT ?= 1
+QEMU_PREBUILT_PATH= $(TOOL_DIR)/qemu
+
+QEMU ?= qemu-system-i386
+MEM  ?= 16M
+
+# Bochs
+#BOCHS ?= tools/bochs/bochs-debugger
+BOCHS_PATH =
+BOCHS_PREBUILT ?= 1
+BOCHS_PREBUILT_PATH = ${TOOL_DIR}/bochs
+
+BOCHS ?= bochs
+
+# VM configuration
+VM_CFG = $(TOOL_DIR)/.vm.cfg
+
+# Tool for specify root device
+SETROOTDEV = RAMDISK_START=$(RAMDISK_START) $(TOOL_DIR)/setrootdev.sh
+
+# Specify the Rootfs Image file
+HDA_IMG = hdc-0.11.img
+FLP_IMG = rootimage-0.11
+RAM_IMG = rootram.img
+
+# Ramdisk start offset and size, in Kb
+RAMDISK_START ?= 256
+
+# Tool for call graph generation
+CG = $(TOOL_DIR)/callgraph
+
+_QEMU_OPTS = -m $(MEM) -boot c
+QEMU_OPTS  = -m $(MEM) -boot a -fda $(LINUX_IMAGE)
+
+ifeq ($(OS), Linux)
+  ifeq ($(QEMU_PREBUILT), 1)
+    QEMU_PATH = $(QEMU_PREBUILT_PATH)
+    QEMU_XOPTS = -no-kqemu -L $(QEMU_PATH)
+  endif
+  ifeq ($(BOCHS_PREBUILT), 1)
+    BOCHS_PATH = $(BOCHS_PREBUILT_PATH)
+  endif
+endif
+
+ifeq ($(OS), Darwin)
+  GDB := tools/mac/gdb
+endif

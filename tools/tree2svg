@@ -1,0 +1,16 @@
+#!/bin/bash
+#
+# tree2svg -- Generate the graph for a tree
+#
+
+# Tree2Dot
+if [ "x$OS" == "xDarwin" ]; then
+    TOP_DIR=$(dirname $0)/
+else
+    TOP_DIR=$(dirname `readlink -f $0`)/
+fi
+tree2dotx=${TOP_DIR}/tree2dotx
+
+tree2dotx | dot -Tsvg -o tree.svg
+
+ls tree.svg

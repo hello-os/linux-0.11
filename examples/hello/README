@@ -1,0 +1,46 @@
+# This is a root file system for linux 0.11 kernel.
+#
+# Rebuild from materials gathered from Internet.
+#
+# 2004.1.4 by Zhao Jiong ( gohigh@sh163.net )
+#
+# http://oldlinux.org/
+
+
+Now, this is a very basic root file system for linux 0.1x.
+I wll add more things to this release soon.
+
+This release can only do little things. you can test vi, ls,
+mkdir etc. Just for testing with kernel source code.
+
+NOTE:
+When testing floppy root (as running bochsrc-fd), when showing
+the message of " Insert root floppy and press ENTER", JUST 
+press the Enter key. I have already attached the root floppy 
+to the 'B:' diskette driver.
+
+The system will panic unpredicatablly. Use at your own risk!
+
+Changelog:
+2004.3.29
+	This packet now contains gcc 1.40 tools. Just execute
+	the following command in /usr/root/ directory:
+	cd /usr/root
+	gcc -o hello hello.c
+	strip hello
+	./hello
+	
+2004.3.4
+	This is truelly kernel 0.11 driving system!!
+	In order to run bash 1.12.1, I inserted several system
+	call stubs. To show  the file date correctly, I added
+	one line to the kernel/mktime.c at the top of file.
+	For details, see the linux-0.11.dif file.
+	
+	Add Input/Output tools, such as mtools dealing with DOS
+	diskettes, mount/umount command, compress, df, awk...
+~
+~
+~
+:wq
+#

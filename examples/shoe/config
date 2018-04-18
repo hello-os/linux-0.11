@@ -1,0 +1,71 @@
+#
+#			Minix Configuration File
+#
+# Last Edit
+#
+# 04-Dec-1989	Converted for new environment code
+# 22-Apr-1989	Added run list
+# 01-Mar-1989	Added processor limitation
+# 15-Feb-1989	Removed interleave
+# 19-Oct-1988	Added device specification
+# 10-Oct-1988	Added keyboard option and removed fsck
+# 28-Sep-1988	Added boot option
+
+# The run entry specifies a list of standalone images to load.
+
+#run		/etc/system/db
+
+# The boot entry locates an image put together using build. This
+# entry will be used if the load by components option fails.
+
+boot		/usr/src/linux/linux/Image
+
+# The following entry is passed to the kernel and thence to the
+# tty driver. It indicates the type of keyboard that is connected
+# to the console. The number is the scan code for the relevant
+# key. Please refer to the tty driver for more details.
+
+setenv scancode 13
+
+# The following entry is passed to the kernel. It is used to limit
+# the processor type for testing and compatibility:
+#
+# below 286:	forces 286's and 386's to use (unprotected) 8088 mode
+# 287 to 385:	forces 386's to use protected 286 mode
+# above 385:	no restriction
+
+setenv processor 386
+
+# The following entries locate the components of the Minix kernel.
+# The entries will be used in order to load and build Minix on the
+# fly. The "-s" option in front of a component name says to strip the
+# symbol table for the component.
+
+fs		/etc/system/fs
+init		/etc/system/init
+mm		/etc/system/mm
+kernel		/etc/system/kernel
+
+# The following entries specify the system devices. The possibilities are
+#
+# rootdev:	the root device (default /dev/ram).
+# ramimagedev:	the device to copy the RAM image from (default /dev/fd0).
+#		This is only used when rootdev is /dev/ram.
+# ramsize:	the size of the RAM disk (default 0). This is overridden
+#		by the size of ramimagedev when rootdev is /dev/ram.
+#
+# The directory is not scanned for the device names so the following
+# correspondences are hard coded (x is any number):
+#
+# /dev/ram:	device 1, minor 0 (the RAM disk)
+# /dev/fdx:	device 2, minor x (floppy x)
+# /dev/atx:	device 2, minor x (also floppy x - size is not checked)
+# /dev/hdx:	device 3, minor x (hard disk x / 5, partition x % 5)
+# bootdev:	the boot device, encoded in the same way.
+#
+# The leading "/dev/" is optional. All other names are regarded as illegal
+# and replaced by /dev/ram.
+
+setdev rootdev bootdev
+#videomode 3 8
+

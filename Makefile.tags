@@ -1,0 +1,6 @@
+tag: tags
+tags: $(LINUX_SRC)
+	$(Q)(cd $(LINUX_SRC); ctags -R)
+
+cscope: $(LINUX_SRC)
+	$(Q)(cd $(LINUX_SRC); cscope -Rbkq)

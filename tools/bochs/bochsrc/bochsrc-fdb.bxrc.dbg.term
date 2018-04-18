@@ -1,0 +1,15 @@
+gdbstub: enabled=1, port=1234, text_base=0, data_base=0, bss_base=0
+romimage: file=/usr/share/bochs/BIOS-bochs-latest
+megs: 16
+vgaromimage: file=/usr/share/vgabios/vgabios.bin
+floppya: 1_44="src/Image", status=inserted, write_protected=1
+floppyb: 1_44="rootfs/rootimage-0.11", status=inserted
+boot: a
+log: bochsout.txt
+#floppy_command_delay: 50000
+#ips: 4000000
+mouse: enabled=0
+private_colormap: enabled=0
+fullscreen: enabled=0
+screenmode: name="sample"
+display_library: term

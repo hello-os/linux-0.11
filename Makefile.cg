@@ -1,0 +1,24 @@
+# Makefile for callgraph generation
+
+# OS := $(shell uname)
+# CG := tools/callgraph
+
+# f: function
+# d: directory or file
+# b: callgraph picture displayer
+# D: calling depth
+
+f ?= main
+d ?= ./src
+D ?= 10
+
+# Mac OS X
+ifeq ($(OS), Darwin)
+  b ?= /Applications/Safari.app/Contents/MacOS/Safari
+else
+  b ?= chromium-browser
+endif
+
+cg:
+	$(Q)$(CG) -f $(f) -d $(d) -b $(b) -D $(D)
+

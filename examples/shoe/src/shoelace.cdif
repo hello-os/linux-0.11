@@ -1,0 +1,755 @@
+echo x - bootsect.x
+sed '/^X/s///' > bootsect.x << '/'
+X|
+X|	bootsect.s		(C) 1991 Linus Torvalds
+X|
+X| bootsect.s is loaded at 0x7c00 by the bios-startup routines, and moves
+X| iself out of the way to address 0x90000, and jumps there.
+X|
+X| It then loads 'setup' directly after itself (0x90200), and the system
+X| at 0x10000, using BIOS interrupts. 
+X|
+X| NOTE! currently system is at most 8*65536 bytes long. This should be no
+X| problem, even in the future. I want to keep it simple. This 512 kB
+X| kernel size should be enough, especially as this doesn't contain the
+X| buffer cache as in minix
+X|
+X| The loader has been made as simple as possible, and continuos
+X| read errors will result in a unbreakable loop. Reboot by hand. It
+X| loads pretty fast by getting whole sectors at a time whenever possible.
+X
+X.text
+X.define _startlinux
+X.text
+X
+XSETUPLEN = 4				| nr of setup-sectors
+XBOOTSEG  = 0x07c0			| original address of boot-sector
+XINITSEG  = 0x9000			| we move boot here - out of the way
+XSETUPSEG = 0x9020			| setup starts here
+XSYSSEG   = 0x1000			| system loaded at 0x10000 (65536).
+X
+X| ROOT_DEV:	0x000 - same type of floppy as boot.
+X|		0x301 - first partition on first drive etc
+XROOT_DEV = 0x302 | 0x306
+X
+X_startlinux:
+X 	mov	ax,#BOOTSEG
+X 	mov	ds,ax
+X 	mov	ax,#INITSEG
+X 	mov	es,ax
+Xgo:	mov	ax,cs
+X	mov	ds,ax
+X	mov	es,ax
+X| put stack at 0x9ff00.
+X	mov	ss,ax
+X	mov	sp,#0xFF00		| arbitrary value >>512
+X
+Xok_load_setup:
+X
+X| Get disk drive parameters, specifically nr of sectors/track
+X
+X	mov	ch,#0x00
+X	seg cs
+X|	mov	sectors,cx
+X	mov	ax,#INITSEG
+X	mov	es,ax
+X
+X
+X
+X	seg cs
+X
+X| after that (everyting loaded), we jump to
+X| the setup-routine loaded directly after
+X| the bootblock:
+X
+X	jmpi	0,SETUPSEG
+X
+X
+X
+Xmsg1:
+X	.byte 13,10
+X	.ascii "Loading system ..."
+X	.byte 13,10,13,10
+X
+X.text
+Xendtext:
+X.data
+Xenddata:
+X.bss
+Xendbss:
+/
+echo x - mxvid50
+sed '/^X/s///' > mxvid50 << '/'
+XFrom news.UVic.CA!ubc-cs!news-server.csri.toronto.edu!bonnie.concordia.ca!uunet!math.fu-berlin.de!unido!fauern!NewsServ!rommel Mon Sep  9 11:55:30 PDT 1991
+XArticle: 11369 of comp.os.minix
+XPath: sol.UVic.CA!news.UVic.CA!ubc-cs!news-server.csri.toronto.edu!bonnie.concordia.ca!uunet!math.fu-berlin.de!unido!fauern!NewsServ!rommel
+XFrom: rommel@Informatik.TU-Muenchen.DE (Kai-Uwe Rommel)
+XNewsgroups: comp.os.minix
+XSubject: configurable screen size for Minix (386)
+XMessage-ID: <1991Sep8.120010.3373@Informatik.TU-Muenchen.DE>
+XDate: 8 Sep 91 12:00:10 GMT
+XSender: news@Informatik.TU-Muenchen.DE (News System)
+XOrganization: Technische Universitaet Muenchen, Germany
+XLines: 403
+X
+XI wanted to play around with different screen modes for MINIX and found
+Xit inconvenient always to change *both* shoelace and kernel/console.c,
+Xrecompile and link etc.
+X
+XSo I have changed shoelace to let it accept a new command:
+X	"videomode <mode> [font height]"
+Xboth in the config file and interactive. This command sets a BIOS
+Xbased video mode as well as the text font to 8, 14 or 16 pixels high.
+XThe font height is optional. Also, I put two setenv commands in config:
+X	"setenv scr_cols <xx>"	and
+X	"setenv scr_rows <yy>"
+Xwhich are passed to the kernel by shoelace. Using this command you can
+Xeither set a video mode uniqe to your video board, such as
+X	"videomode 36"
+Xfor Tseng 4000 boards (132x28) or the standard VGA text mode with a
+Xdifferent font height, such as 8x8, i.e. 80x50 mode:
+X	"videomode 3 8"
+X
+XThen I changed kernel/console.c (relative to the one with virtual
+Xconsoles) to use variables SCR_COLS, SCR_ROWS and SCR_CHARS instead of
+Xcpp defines. These variables were added to kernel/glo.h and are set
+Xin kernel/cstart.c if the matching environment variables are found.
+XOtherwise they are left at their defaults (80x25).
+X
+XThe big disadvantage is, that SCR_CHARS is used in a struct and variable
+Xdeclaration for the virtual screen buffers. Therefore I had to use a new
+Xdefine there with an upper bound on the screen size. The values I choose
+Xfor the maximum screen size (132 x 50) cause the data size of the kernel
+Xto grow by 36k when using four virtual consoles (9.5k per screen,
+X(132 * 50 - 80 * 25) * 2 bytes = ~9.5k). Therefore you might want to use
+Xthese patches only with a 32 bit system (i.e. Minix-386 or probably on a
+X68000 too? I don't know if virtual consoles work on the 68000's too).
+XThey don't work with these max sizes with 16 bit PC Minix.
+X
+XApply shoelace.dif to shoelace 1.0a and kernel.dif to /usr/src/kernel
+Xand recompile kernel and shoelace. Change shoelace's config for your
+Xfavourite video mode. And, important, don't forget to correct the co# and
+Xli# settings in /etc/termcap for your terminal type.
+X
+XKai Uwe Rommel
+Xrommel@informatik.tu-muenchen.de
+X
+X#!/bin/sh
+X# This is a shell archive (produced by shar 3.53)
+X# To extract the files from this archive, save it to a file, remove
+X# everything above the "!/bin/sh" line above, and type "sh file_name".
+X#
+X# made 09/08/1991 11:26 UTC by rommel@dssiegert4
+X# Source directory /usr/stud/rommel/tmp
+X#
+X# existing files will NOT be overwritten unless -c is specified
+X#
+X# This shar contains:
+X# length  mode       name
+X# ------ ---------- ------------------------------------------
+X#   2080 -rw-rw-rw- README
+X#   3063 -rw-rw-rw- kernel.dif
+X#   3819 -rw-rw-rw- shoelace.dif
+X#
+X# ============= README ==============
+Xif test -f 'README' -a X"$1" != X"-c"; then
+X	echo 'x - skipping README (File already exists)'
+Xelse
+Xecho 'x - extracting README (Text)'
+Xsed 's/^X//' << 'SHAR_EOF' > 'README' &&
+XI wanted to play around with different screen modes for MINIX and found
+Xit inconvenient always to change *both* shoelace and kernel/console.c,
+Xrecompile and link etc.
+XX
+XSo I have changed shoelace to let it accept a new command:
+XX	"videomode <mode> [font height]"
+Xboth in the config file and interactive. This command sets a BIOS
+Xbased video mode as well as the text font to 8, 14 or 16 pixels high.
+XThe font height is optional. Also, I put two setenv commands in config:
+XX	"setenv scr_cols <xx>"	and
+XX	"setenv scr_rows <yy>"
+Xwhich are passed to the kernel by shoelace. Using this command you can
+Xeither set a video mode uniqe to your video board, such as
+XX	"videomode 36"
+Xfor Tseng 4000 boards (132x28) or the standard VGA text mode with a
+Xdifferent font height, such as 8x8, i.e. 80x50 mode:
+XX	"videomode 3 8"
+XX
+XThen I changed kernel/console.c (relative to the one with virtual
+Xconsoles) to use variables SCR_COLS, SCR_ROWS and SCR_CHARS instead of
+Xcpp defines. These variables were added to kernel/glo.h and are set
+Xin kernel/cstart.c if the matching environment variables are found.
+XOtherwise they are left at their defaults (80x25).
+XX
+XThe big disadvantage is, that SCR_CHARS is used in a struct and variable
+Xdeclaration for the virtual screen buffers. Therefore I had to use a new
+Xdefine there with an upper bound on the screen size. The values I choose
+Xfor the maximum screen size (132 x 50) cause the data size of the kernel
+Xto grow by 36k when using four virtual consoles (9.5k per screen,
+X(132 * 50 - 80 * 25) * 2 bytes = ~9.5k). Therefore you might want to use
+Xthese patches only with a 32 bit system (i.e. Minix-386 or probably on a
+X68000 too? I don't know if virtual consoles work on the 68000's too).
+XThey don't work with these max sizes with 16 bit PC Minix.
+XX
+XApply shoelace.dif to shoelace 1.0a and kernel.dif to /usr/src/kernel
+Xand recompile kernel and shoelace. Change shoelace's config for your
+Xfavourite video mode. And, important, don't forget to correct the co# and
+Xli# settings in /etc/termcap for your terminal type.
+XX
+XKai Uwe Rommel
+Xrommel@informatik.tu-muenchen.de
+XSHAR_EOF
+Xchmod 0666 README ||
+Xecho 'restore of README failed'
+XWc_c="`wc -c < 'README'`"
+Xtest 2080 -eq "$Wc_c" ||
+X	echo 'README: original size 2080, current size' "$Wc_c"
+Xfi
+X# ============= kernel.dif ==============
+Xif test -f 'kernel.dif' -a X"$1" != X"-c"; then
+X	echo 'x - skipping kernel.dif (File already exists)'
+Xelse
+Xecho 'x - extracting kernel.dif (Text)'
+Xsed 's/^X//' << 'SHAR_EOF' > 'kernel.dif' &&
+X*** glo.h~	Tue Jul 23 00:47:17 1991
+X--- glo.h	Tue Jul 23 19:29:04 1991
+X***************
+X*** 42,47 ****
+X--- 42,50 ----
+XX  EXTERN int ega;			/* nonzero if console is EGA */
+XX  EXTERN int scan_code;		/* scan code of key pressed to start minix */
+XX  EXTERN int snow;		/* nonzero if screen needs snow removal */
+X+ #ifdef INTEL_32BITS
+X+ extern int SCR_COLS, SCR_ROWS, SCR_CHARS;
+X+ #endif
+XX
+XX  /* Memory sizes. */
+XX  EXTERN unsigned ext_memsize;	/* initialized by assembler startup code */
+X*** cstart.c~	Tue Jul 23 00:23:53 1991
+X--- cstart.c	Tue Jul 23 19:28:48 1991
+X***************
+X*** 93,98 ****
+X--- 93,106 ----
+XX  	if (envp != NIL_PTR) bx = boot_parameters.bp_scancode = k_atoi(envp);
+XX  	envp = k_getenv("processor");
+XX  	if (envp != NIL_PTR) boot_parameters.bp_processor = k_atoi(envp);
+X+ #ifdef INTEL_32BITS
+X+ 	/* set up video configuration */
+X+ 	envp = k_getenv("scr_cols");
+X+ 	if (envp != NIL_PTR) SCR_COLS = k_atoi(envp);
+X+ 	envp = k_getenv("scr_rows");
+X+ 	if (envp != NIL_PTR) SCR_ROWS = k_atoi(envp);
+X+ 	SCR_CHARS = SCR_COLS * SCR_ROWS;
+X+ #endif
+XX    }
+XX    scan_code = bx;
+XX
+X*** console.c~	Tue Jul 23 19:31:06 1991
+X--- console.c	Tue Jul 23 19:28:23 1991
+X***************
+X*** 63,68 ****
+X--- 63,80 ----
+XX  #include "protect.h"
+XX  #include "tty.h"
+XX
+X+ #ifdef INTEL_32BITS
+X+   PUBLIC int SCR_COLS =     80;
+X+   PUBLIC int SCR_ROWS =     25;
+X+   PUBLIC int SCR_CHARS =    80 * 25;
+X+   #define SCR_MAX	    (132*50)
+X+ #else
+X+   #define SCR_COLS          80	/* # characters on a line */
+X+   #define SCR_ROWS          25	/* # lines on the screen */
+X+   #define SCR_CHARS         (SCR_COLS * SCR_ROWS)	/* # characters on the screen */
+X+   #define SCR_MAX	    SCR_CHARS
+X+ #endif
+X+
+XX  /* Constants used by the console driver. */
+XX  #define C_VID_SIZE    0x2000	/* color, 8k word of video RAM */
+XX  #define M_VID_SIZE    0x0800	/* monochrome, 2k word of video RAM */
+X***************
+X*** 71,79 ****
+XX  #define DEF_FLUSH_COST	  12	/* default flush cost */
+XX  #define BLACK		   0	/* black = color 0 (on both mono. and color) */
+XX  #define WHITE		   7	/* white = color 7 (on both mono. and color) */
+X- #define SCR_COLS          80	/* # characters on a line */
+X- #define SCR_ROWS          25	/* # lines on the screen */
+X- #define SCR_CHARS         (SCR_COLS * SCR_ROWS)	/* # characters on the screen */
+XX  #define GO_FORWARD         0	/* scroll forward */
+XX  #define GO_BACKWARD        1	/* scroll backward */
+XX  #define MAX_ESC_PARMS     10	/* number of escape sequence params allowed */
+X--- 83,88 ----
+X***************
+X*** 177,183 ****
+XX    /* Hardware parameters. */
+XX    int org;			/* position of first char. in cyclic buffer */
+XX    int cursor;			/* offset of cursor from org */
+X!   short obuf[SCR_CHARS];	/* virtual screen buffer */
+XX    short blanks[BLANK_BUF_SIZE];	/* buffer containing blank chars. */
+XX  };
+XX
+X--- 186,192 ----
+XX    /* Hardware parameters. */
+XX    int org;			/* position of first char. in cyclic buffer */
+XX    int cursor;			/* offset of cursor from org */
+X!   short obuf[SCR_MAX];	/* virtual screen buffer */
+XX    short blanks[BLANK_BUF_SIZE];	/* buffer containing blank chars. */
+XX  };
+XX
+XSHAR_EOF
+Xchmod 0666 kernel.dif ||
+Xecho 'restore of kernel.dif failed'
+XWc_c="`wc -c < 'kernel.dif'`"
+Xtest 3063 -eq "$Wc_c" ||
+X	echo 'kernel.dif: original size 3063, current size' "$Wc_c"
+Xfi
+X# ============= shoelace.dif ==============
+Xif test -f 'shoelace.dif' -a X"$1" != X"-c"; then
+X	echo 'x - skipping shoelace.dif (File already exists)'
+Xelse
+Xecho 'x - extracting shoelace.dif (Text)'
+Xsed 's/^X//' << 'SHAR_EOF' > 'shoelace.dif' &&
+Xdiff -cbBw orig/shoecli.c ./shoecli.c
+X*** orig/shoecli.c	Sun Sep  8 13:11:45 1991
+X--- ./shoecli.c	Sun Sep  8 13:29:06 1991
+X***************
+X*** 45,50 ****
+X--- 45,51 ----
+XX  static void run P((int, char **));
+XX  static void setdev P((int, char **));
+XX  static void setenv P((int, char **));
+X+ static void setvmode P((int, char **));
+XX  static inode_nr showdir P((buffer *));
+XX  static void unsetenv P((int, char **));
+XX
+X***************
+X*** 69,74 ****
+X--- 70,76 ----
+XX    {"setdev", "name device    set environment string as device",        setdev},
+XX    {"unsetenv", "name         delete environment string",             unsetenv},
+XX    {"printenv", "             print environment strings",             printenv},
+X+   {"videomode", "mode [fnt]  set video mode/font [8/14/16]",         setvmode},
+XX    {0, 0, 0}
+XX  };
+XX
+X***************
+X*** 495,498 ****
+X--- 497,519 ----
+XX      }
+XX    }
+XX    return 0;
+X+ }
+X+
+X+ /*
+X+  * set video mode
+X+  */
+X+
+X+ static void setvmode F2(int, argc, char **, argv)
+X+ {
+X+ 	int height;
+X+
+X+ 	if ( argc > 1 )
+X+ 		set_vmode(atoi(argv[1]));
+X+
+X+ 	if ( argc > 2 )
+X+ 	{
+X+ 		height = atoi(argv[2]);
+X+ 		if ( height == 8 || height == 14 || height == 16 )
+X+ 			set_vfont(height == 8 ? 0x12 : height == 14 ? 0x11 : 0x14);
+X+ 	}
+XX  }
+Xdiff -cbBw orig/shoeconf.c ./shoeconf.c
+X*** orig/shoeconf.c	Sun Sep  8 13:11:45 1991
+X--- ./shoeconf.c	Sun Sep  8 13:29:06 1991
+X***************
+X*** 77,82 ****
+X--- 77,83 ----
+XX  static int searchenvs P((ENV *, char *, int *));
+XX  static int setenvs P((ENV *, char *, char *));
+XX  static void unsetenvs P((ENV *, char *));
+X+ static void setvmode P((int, char **));
+XX
+XX  static configuration *cnfp;		/* configuration pointer */
+XX
+X***************
+X*** 92,97 ****
+X--- 93,99 ----
+XX    {"setenv",      csetenv},
+XX    {"setdev",      csetdev},
+XX    {"run",         run},
+X+   {"videomode",   setvmode},
+XX    {0}
+XX  };
+XX
+X***************
+X*** 638,641 ****
+X--- 640,662 ----
+XX    if ((n = searchenvs(env, name, (int *) 0)) >= 0)
+XX      return strchr(env->envsp[n], '=') + 1;
+XX    return (char *) 0;
+X+ }
+X+
+X+ /*
+X+  * set video mode
+X+  */
+X+
+X+ static void setvmode F2(int, argc, char **, argv)
+X+ {
+X+ 	int height;
+X+
+X+ 	if ( argc > 1 )
+X+ 		set_vmode(atoi(argv[1]));
+X+
+X+ 	if ( argc > 2 )
+X+ 	{
+X+ 		height = atoi(argv[2]);
+X+ 		if ( height == 8 || height == 14 || height == 16 )
+X+ 			set_vfont(height == 8 ? 0x12 : height == 14 ? 0x11 : 0x14);
+X+ 	}
+XX  }
+Xdiff -cbBw orig/shoelace.h ./shoelace.h
+X*** orig/shoelace.h	Sun Sep  8 13:13:45 1991
+X--- ./shoelace.h	Sun Sep  8 13:12:59 1991
+X***************
+X*** 41,51 ****
+XX  # define mask_bits mode_t
+XX  # define MAX_LINKS LINK_MAX
+XX  # define NAME_SIZE NAME_MAX
+X! # include "/usr/src/fs/const.h"
+X! # include "/usr/src/fs/type.h"
+X! # include "/usr/src/fs/buf.h"
+X! # include "/usr/src/fs/inode.h"
+X! # include "/usr/src/fs/super.h"
+XX  #else					/* Minix 1.4a and below */
+XX  # include <limits.h>
+XX  # include <minix/const.h>
+X--- 41,51 ----
+XX  # define mask_bits mode_t
+XX  # define MAX_LINKS LINK_MAX
+XX  # define NAME_SIZE NAME_MAX
+X! # include "../fs/const.h"
+X! # include "../fs/type.h"
+X! # include "../fs/buf.h"
+X! # include "../fs/inode.h"
+X! # include "../fs/super.h"
+XX  #else					/* Minix 1.4a and below */
+XX  # include <limits.h>
+XX  # include <minix/const.h>
+Xdiff -cbBw orig/shoelace.x ./shoelace.x
+X*** orig/shoelace.x	Sun Sep  8 13:11:44 1991
+X--- ./shoelace.x	Sun Sep  8 13:26:33 1991
+X***************
+X*** 45,50 ****
+X--- 45,52 ----
+XX  	.text
+XX  	.define _main
+XX  	.define	_vidinit
+X+ 	.define _set_vmode
+X+ 	.define _set_vfont
+XX  	.define _getram
+XX  	.define _setram
+XX  	.define	_zeromemory
+X***************
+X*** 182,187 ****
+X--- 184,211 ----
+XX  	xor	dx,dx
+XX  	int	0x10
+XX  |
+X+ 	jmp	cret
+X+
+X+ _set_vmode:
+X+
+X+ 	xor	ax,ax
+X+ 	call	csv
+X+
+X+ 	mov	ax,4(bp)
+X+ 	int	0x10
+X+
+X+ 	jmp	cret
+X+
+X+ _set_vfont:
+X+
+X+ 	xor	ax,ax
+X+ 	call	csv
+X+
+X+ 	mov	ax,4(bp)
+X+ 	mov	ah,#0x11
+X+ 	mov	bx,#0x0000
+X+ 	int	0x10
+X+
+XX  	jmp	cret
+XX
+XX  |	Get amount of ram
+XSHAR_EOF
+Xchmod 0666 shoelace.dif ||
+Xecho 'restore of shoelace.dif failed'
+XWc_c="`wc -c < 'shoelace.dif'`"
+Xtest 3819 -eq "$Wc_c" ||
+X	echo 'shoelace.dif: original size 3819, current size' "$Wc_c"
+Xfi
+Xexit 0
+X
+XKai Uwe Rommel
+X
+X/* Kai Uwe Rommel, Munich ----- rommel@informatik.tu-muenchen.de */
+X
+XDOS ... is still a real mode only non-reentrant interrupt
+Xhandler, and always will be.                -Russell Williams
+X
+X
+/
+echo x - shoelace.pat
+sed '/^X/s///' > shoelace.pat << '/'
+X*** shoeconf.c.orig	Thu Nov  7 07:16:53 1991
+X--- shoeconf.c	Thu Nov  7 03:59:48 1991
+X***************
+X*** 70,77 ****
+X  static void component P((struct c_part *, int, char **));
+X  static void bootname P((int, char **));
+X  static void run P((int, char **));
+X! static unsigned currentdev P((void));
+X! static unsigned getdev P((char *));
+X  static void csetenv P((int, char **));
+X  static void csetdev P((int, char **));
+X  static int searchenvs P((ENV *, char *, int *));
+X--- 70,77 ----
+X  static void component P((struct c_part *, int, char **));
+X  static void bootname P((int, char **));
+X  static void run P((int, char **));
+X! unsigned currentdev P((void));
+X! unsigned getdev P((char *));
+X  static void csetenv P((int, char **));
+X  static void csetdev P((int, char **));
+X  static int searchenvs P((ENV *, char *, int *));
+X***************
+X*** 415,421 ****
+X   * Convert diskcode:bootpart to a device number
+X   */
+X  
+X! static unsigned currentdev F0()
+X  
+X  {
+X    if (diskcode & HARD_DISK)
+X--- 415,421 ----
+X   * Convert diskcode:bootpart to a device number
+X   */
+X  
+X! unsigned currentdev F0()
+X  
+X  {
+X    if (diskcode & HARD_DISK)
+X***************
+X*** 429,435 ****
+X   * be found there, hard coded numbers are used.
+X   */
+X  
+X! static unsigned getdev F1(char *, devname)
+X  
+X  {
+X    int devnum;				/* guessed device number */
+X--- 429,435 ----
+X   * be found there, hard coded numbers are used.
+X   */
+X  
+X! unsigned getdev F1(char *, devname)
+X  
+X  {
+X    int devnum;				/* guessed device number */
+X*** shoe.c.orig	Wed Nov  6 08:32:31 1991
+X--- shoe.c	Thu Nov  7 08:16:42 1991
+X***************
+X*** 106,111 ****
+X--- 106,112 ----
+X  static ADDRESS LoadPoint;		/* where to load the file */
+X  static ADDRESS LastLoad;		/* last stacked file */
+X  static char LoadStart;			/* load is just starting */
+X+ static int Linux = 0;
+X  
+X  static enum components MinixPart;	/* which part to load */
+X  static struct c_part *MinixCfp;		/* configure part to load */
+X***************
+X*** 237,242 ****
+X--- 238,244 ----
+X   */
+X  }
+X  
+X+ configuration *SaveConfigPtr;
+X  /*
+X   * Once the migration has been effected, control passes to this
+X   * function. This function begins the real work of loading Minix.
+X***************
+X*** 252,257 ****
+X--- 254,260 ----
+X  {
+X    char configok;			/* configuration file ok */
+X    configuration cnf;			/* configuration */
+X+   SaveConfigPtr = &cnf;
+X  
+X  /* Check stack space */
+X    if (loadinfo[SHOELACE].stack == 0) {
+X***************
+X*** 606,611 ****
+X--- 609,618 ----
+X   * ROOT_INODE and filesize 1.
+X   */
+X  
+X+ #define SETUPSEG 0x9020
+X+ extern void startlinux();
+X+ unsigned getdev();
+X+ 
+X  static inode_nr
+X  readkernel F1(buffer *, bp)
+X  
+X***************
+X*** 627,641 ****
+X  
+X      if ( (long) (* (unsigned int *) (&((char *) bp)[build_base]) + 1)
+X           * SECTOR_SIZE != filesize) {
+X!       printf("%s conflicting size information\n", filename);
+X!       longjmp(errjmp, 1);
+X!     }
+X! 
+X!     fsck_ds = * (unsigned int *) (&((char *) bp)[build_base+2]);
+X!     fsck_pc = * (unsigned int *) (&((char *) bp)[build_base+4]);
+X!     fsck_cs = * (unsigned int *) (&((char *) bp)[build_base+6]);
+X! 
+X!     bpinx = SECTOR_SIZE;
+X    }
+X  
+X    bpsize = sizeof(*bp) - bpinx;
+X--- 634,667 ----
+X  
+X      if ( (long) (* (unsigned int *) (&((char *) bp)[build_base]) + 1)
+X           * SECTOR_SIZE != filesize) {
+X!   /*    printf("%s conflicting size information\n", filename);
+X!       longjmp(errjmp, 1);*/
+X!       unsigned *myptr = (unsigned int *) (&((char *) bp)[508]);
+X!       /*char *myroot = getenvs(SaveConfigPtr,"rootdev");
+X!       if (strcmp(myroot,"bootdev"))
+X!         *myptr = atoi(myroot);
+X!       else
+X!         *myptr = 0;
+X!       if (*myptr == 0)
+X!       { if (diskcode)
+X!           *myptr = DEV_HD0 + bootpart;
+X!         else
+X!           if (n_sectors = 15)
+X!             *myptr = 0x208;
+X!           else
+X!             *myptr = 0x21c;
+X!       }*/
+X!       Linux = 1;
+X!       LoadPoint = 0x90000;
+X!       bpinx = 0;
+X!     }
+X!     else {
+X!       fsck_ds = * (unsigned int *) (&((char *) bp)[build_base+2]);
+X!       fsck_pc = * (unsigned int *) (&((char *) bp)[build_base+4]);
+X!       fsck_cs = * (unsigned int *) (&((char *) bp)[build_base+6]);
+X!       bpinx = SECTOR_SIZE;
+X!     }
+X! 
+X    }
+X  
+X    bpsize = sizeof(*bp) - bpinx;
+X***************
+X*** 644,654 ****
+X--- 670,687 ----
+X      copyto((char *) bp + bpinx, LoadPoint, bpsize);
+X      filesize  -= bpsize;
+X      LoadPoint += bpsize;
+X+     if (Linux && (LoadPoint==0x90C00))
+X+     { 
+X+       copyto((char *) bp + SECTOR_SIZE, (ADDRESS)0x10000, SECTOR_SIZE);
+X+       LoadPoint = 0x10200;
+X+     }
+X      return 0;
+X    }
+X  
+X    copyto((char *) bp + bpinx, LoadPoint, (unsigned int) filesize);
+X    filesize = 1;
+X+   if (Linux)
+X+     startlinux();
+X    return ROOT_INODE;
+X  }
+X  
+X*** shoelace.x.ori	Wed Nov  6 21:57:25 1991
+X--- shoelace.x	Thu Nov  7 07:14:20 1991
+X***************
+X*** 478,485 ****
+X  
+X  	seg	es
+X  	mov	ax,RAMSIZE		| ram size in kb
+X! 	sub	ax,#0x40		| drop 64 kb
+X! 	and	ax,#-0x40		| round down
+X  	mov	cx,#CLICKSPERKB
+X  	mul	cx			| ram size in clicks
+X  	mov	es,ax			| destination segment
+X--- 478,485 ----
+X  
+X  	seg	es
+X  	mov	ax,RAMSIZE		| ram size in kb
+X! 	sub	ax,#0x80		| drop 128 kb
+X! 	and	ax,#-0x80		| round down
+X  	mov	cx,#CLICKSPERKB
+X  	mul	cx			| ram size in clicks
+X  	mov	es,ax			| destination segment
+X*** shoecli.c.orig	Thu Nov  7 07:18:38 1991
+X--- shoecli.c	Thu Nov  7 04:55:53 1991
+X***************
+X*** 74,79 ****
+X--- 74,80 ----
+X    {0, 0, 0}
+X  };
+X  
+X+ extern configuration *SaveConfigPtr;
+X  void
+X  shoecli F0()
+X  
+X***************
+X*** 83,88 ****
+X--- 84,90 ----
+X    char kbdbuf[INPUTBUFFERSIZE];		/* keyboard buffer */
+X    int i;				/* index */
+X  
+X+   SaveConfigPtr = &config;
+X    defaultconfigure(&config);
+X    
+X    for (putchar('\n'); ; ) {
+X*** makefile.bcc	Wed Nov  6 08:44:32 1991
+X--- makefile	Wed Nov  6 23:44:12 1991
+X***************
+X*** 25,31 ****
+X  		shoedos.x shoe.c shoebfs.c \
+X  		shoecli.c shoeconf.c shoefs.c \
+X  		shoefsck.c shoeglob.c shoemem.c \
+X! 		shoemisc.c shoeterm.c
+X  
+X  laceupobj=	laceup.o
+X  winibootobj=	shoehead.o winiboot.o
+X--- 25,31 ----
+X  		shoedos.x shoe.c shoebfs.c \
+X  		shoecli.c shoeconf.c shoefs.c \
+X  		shoefsck.c shoeglob.c shoemem.c \
+X! 		shoemisc.c shoeterm.c bootsect.x
+X  
+X  laceupobj=	laceup.o
+X  winibootobj=	shoehead.o winiboot.o
+X***************
+X*** 35,41 ****
+X  		shoedos.o shoe.o shoebfs.o \
+X  		shoecli.o shoeconf.o shoefs.o \
+X  		shoefsck.o shoeglob.o shoemem.o \
+X! 		shoemisc.o shoeterm.o
+X  
+X  .SUFFIXES:	.o .x .c
+X  .x.o:
+X--- 35,41 ----
+X  		shoedos.o shoe.o shoebfs.o \
+X  		shoecli.o shoeconf.o shoefs.o \
+X  		shoefsck.o shoeglob.o shoemem.o \
+X! 		shoemisc.o shoeterm.o bootsect.o
+X  
+X  .SUFFIXES:	.o .x .c
+X  .x.o:
+/
